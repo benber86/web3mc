@@ -41,6 +41,7 @@ class Multicall:
         compress_alg: str = "jit",
         compress_min_size: int = 800,
         compress_allow_fallback: bool = True,
+        compress_batch: int | None = None,
     ):
         self.web3 = Web3(HTTPProvider(provider_url))
         self.async_web3 = AsyncWeb3(AsyncHTTPProvider(provider_url))
@@ -69,6 +70,7 @@ class Multicall:
         self.compress_alg = compress_alg
         self.compress_min_size = compress_min_size
         self.compress_allow_fallback = compress_allow_fallback
+        self.compress_batch = compress_batch
 
         self.chain_id: int = self.web3.eth.chain_id
 
@@ -99,6 +101,7 @@ class Multicall:
         use_try: bool = False,
         addresses: list[ChecksumAddress] | None = None,
         compress: bool | None = None,
+        compress_batch: int | None = None,
     ) -> list[Any]:
         """
         Calls aggregate or tryAggregate on web3multicall but lets user (optionally) specify a list of target addresses
@@ -120,6 +123,7 @@ class Multicall:
                 block_identifier=block_identifier,
                 target_address_list=addresses,
                 compress=compress,
+                compress_batch=compress_batch,
             )
         )
         logger.debug(f"Multicall took {time.time() - start} seconds")
@@ -132,6 +136,7 @@ class Multicall:
         use_try: bool = False,
         addresses: list[ChecksumAddress] | None = None,
         compress: bool | None = None,
+        compress_batch: int | None = None,
     ) -> list[Any]:
         """
         Calls aggregate or tryAggregate on web3multicall but lets user (optionally) specify a list of target addresses
@@ -152,6 +157,7 @@ class Multicall:
             block_identifier=block_identifier,
             target_address_list=addresses,
             compress=compress,
+            compress_batch=compress_batch,
         )
         logger.debug(f"Multicall took {time.time() - start} seconds")
         return result
@@ -279,6 +285,7 @@ class Multicall:
         block_identifier: BlockIdentifier,
         target_address_list: list[ChecksumAddress] | None = None,
         compress: bool | None = None,
+        compress_batch: int | None = None,
     ) -> list:
         if target_address_list:
             assert len(target_address_list) == len(call_list), "Lists of addresses and calls should have same length."
@@ -309,9 +316,18 @@ class Multicall:
 
         call_method = self._call_aggregate_compressed if effective_compress else self._call_aggregate
 
-        for i in range(0, len(call.encoded_data), batch):
-            call_data = call.encoded_data[i : i + batch]
-            return_types = call.return_types[i : i + batch]
+        effective_batch = batch
+        if effective_compress:
+            if compress_batch is not None:
+                effective_batch = max(1, int(compress_batch))
+            elif self.compress_batch is not None:
+                effective_batch = max(1, int(self.compress_batch))
+            else:
+                effective_batch = len(call.encoded_data)
+
+        for i in range(0, len(call.encoded_data), effective_batch):
+            call_data = call.encoded_data[i : i + effective_batch]
+            return_types = call.return_types[i : i + effective_batch]
             tasks.append(
                 functools.partial(
                     self._parse_aggregate,

@@ -74,6 +74,7 @@ multicall = Multicall(
     compress_alg="jit",  # "auto" | "jit" | "flz" | "cd"
     compress_min_size=800,  # only compress above this size
     compress_allow_fallback=True,  # fallback to vanilla on error
+    compress_batch=None,  # when compressing, split into this many-call batches (None = single call)
 )
 
 ```
@@ -84,6 +85,11 @@ Compresses the single top‑level Multicall `eth_call` and installs a temporary 
 
 - Available algorithms: JIT (default), FLZ, CD.
 - Reference: https://github.com/tadpole-labs/eth-compress-py
+
+Compression uses a different batching argument, as there is usually less needs to reduce input data. However if payloads risk exceeding gas/return limits, you can still use `compress_batch` to split into multiple compressed calls
+
+Compression can be enabled at the global level `Multicall(compress=True, compress_alg="jit")` or at individual function level `aggregate(..., compress=True)`.
+
 
 ## Testing
 Install dependencies, make sure you set `WEB3_HTTP_PROVIDER_URI` environment variable
