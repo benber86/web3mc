@@ -70,10 +70,20 @@ multicall = Multicall(
     max_retries=3,  # retries without use_try (aggregate function in contract)
     gas_limit=50_000_000,  # gas limit for calls
     _semaphore=1000,  # max concurrent coroutines, change carefully!
+    compress=False,  # enable compressed eth_call
+    compress_alg="jit",  # "auto" | "jit" | "flz" | "cd"
+    compress_min_size=800,  # only compress above this size
+    compress_allow_fallback=True,  # fallback to vanilla on error
 )
 
 ```
 
+## Compression
+
+Compresses the single top‑level Multicall `eth_call` and installs a temporary on‑chain decompressor via state override; results are byte‑identical (no ABI decode changes).
+
+- Available algorithms: JIT (default), FLZ, CD.
+- Reference: https://github.com/tadpole-labs/eth-compress-py
 
 ## Testing
 Install dependencies, make sure you set `WEB3_HTTP_PROVIDER_URI` environment variable
