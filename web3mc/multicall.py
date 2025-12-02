@@ -192,7 +192,8 @@ class Multicall:
         data_hex = fn._encode_transaction_data()
         target_address = self.async_contract.address
 
-        to2, data2, override_ec, meta = self._compress_call_data_fn(
+        to2, data2, override_ec, meta = await asyncio.to_thread(
+            self._compress_call_data_fn,
             data_hex,
             target_address,
             alg=self.compress_alg,
